@@ -1,14 +1,20 @@
 function getLabel(nodeData) {
-    if (nodeData.value === null) {
+    if (nodeData.value !== undefined) {
+        return nodeData.value;
+    } else if (nodeData.itemIdentifier !== undefined) {
         var split = nodeData.itemIdentifier.split(/[\/#]/);
         return split[split.length - 1];
     } else {
-        return nodeData.value;
+        return nodeData.type;
     }
 }
 
-var nodeDataDict = {};  // lookup by uuid
-var nodeVisDict = {};  // lookup by uuid
+function getHref(nodeData) {
+    return nodeData.links[0].href;
+}
+
+var nodeDataDict = {};  // lookup by href
+var nodeVisDict = {};  // lookup by href
 
 var edgeDict = {};
 
@@ -27,29 +33,28 @@ var options = {
         hover: true
     },
     physics: {
-        barnesHut: {
-            gravitationalConstant: -20000
-        }
+        solver: "forceAtlas2Based"
     }
 };
 
 var network = new vis.Network(container, vis_data, options);
 
 function addNode(nodeData) {
-    if (!(nodeData.uuid in nodeVisDict)) {
+    href = getHref(nodeData);
+    if (!(href in nodeVisDict)) {
         // If this is a constraint, do nothing
-        if (getLabel(nodeData)[0] === "$") {
+        if (nodeData.type.indexOf("CONSTRAINT") > -1) {
             return;
         }
 
         nodeVis = {
-            id: nodeData.uuid,
+            id: nodeData.links[0].href,
             label: getLabel(nodeData),
             selected: false
         };
 
-        nodeVisDict[nodeData.uuid] = nodeVis;
-        nodeDataDict[nodeData.uuid] = nodeData;
+        nodeVisDict[href] = nodeVis;
+        nodeDataDict[href] = nodeData;
         nodes.add(nodeVis);
     }
 }
@@ -83,13 +88,13 @@ function addEdges(nodeData) {
     $.each(nodeData.out, function(i, edge) {
         addNode(edge.source);
         addNode(edge.target);
-        addEdge(edge.source.uuid, edge.target.uuid, edge.type);
+        addEdge(getHref(edge.source), getHref(edge.target), edge.type);
     });
 
     $.each(nodeData.in, function(i, edge) {
         addNode(edge.source);
         addNode(edge.target);
-        addEdge(edge.source.uuid, edge.target.uuid, edge.type);
+        addEdge(getHref(edge.source), getHref(edge.target), edge.type);
     });
 }
 
@@ -116,12 +121,17 @@ network.on("click", function (params) {
             removeNode(nodeId);
         })
 
-        $.get(nodeDataDict[id].links[0].href, function(nodeData, status) {
+        $.get(getHref(nodeDataDict[id]), function(nodeData, status) {
             addEdges(nodeData, true);
         });
     }
 });
 
-$.get("http://localhost:8080/graph/top", function(data, status) {
+var conceptType = "http://mindmaps.io/concept-type";
+var params = $.param({"itemIdentifier": conceptType});
+
+$.get(
+    "http://localhost:8080/graph/concept/?" + params,
+    function(data, status) {
     addNode(data);
 });
