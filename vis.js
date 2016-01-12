@@ -130,8 +130,4 @@ network.on("click", function (params) {
 var conceptType = "http://mindmaps.io/concept-type";
 var params = $.param({"itemIdentifier": conceptType});
 
-$.get(
-    "http://localhost:8080/graph/concept/?" + params,
-    function(data, status) {
-    addNode(data);
-});
+$.get("http://localhost:8080/graph/concept/?" + params, addNode);
