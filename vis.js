@@ -98,8 +98,23 @@ function addEdges(nodeData) {
     });
 }
 
+function removeUnselected() {
+    var nodesToRemove = [];
+    $.each(nodes.get(), function(i, nodeVis) {
+        if (!(nodeVis.selected)) {
+            nodesToRemove.push(nodeVis.id);
+        }
+    });
+
+    $.each(nodesToRemove, function(i, nodeId) {
+        removeNode(nodeId);
+    })
+}
+
 network.on("click", function (params) {
-    if (params.nodes.length > 0) {
+    if (params.nodes.length === 0) {
+        removeUnselected();
+    } else {
         var id = params.nodes[0];
 
         var nodeVis = nodeVisDict[id];
@@ -109,17 +124,7 @@ network.on("click", function (params) {
         nodeVis.color = 'red';
         nodes.update(nodeVis);
 
-        // Remove any unselected nodes
-        var nodesToRemove = [];
-        $.each(nodes.get(), function(i, nodeOther) {
-            if (!(nodeOther.selected)) {
-                nodesToRemove.push(nodeOther.id);
-            }
-        });
-
-        $.each(nodesToRemove, function(i, nodeId) {
-            removeNode(nodeId);
-        })
+        removeUnselected();
 
         $.get(getHref(nodeDataDict[id]), function(nodeData, status) {
             addEdges(nodeData, true);
