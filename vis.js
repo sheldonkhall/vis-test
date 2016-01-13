@@ -21,6 +21,8 @@ var edgeDict = {};
 var nodes = new vis.DataSet([]);
 var edges = new vis.DataSet([]);
 
+var focusedId = null;
+
 // create a network
 var container = document.getElementById('mynetwork');
 
@@ -118,22 +120,33 @@ function removeUnselected() {
 
 network.on("click", function (params) {
     if (params.nodes.length === 0) {
+        focusedId = null;
         removeUnselected();
     } else {
         var id = params.nodes[0];
 
         var nodeVis = nodeVisDict[id];
 
-        // Mark node
-        nodeVis.selected = true;
-        nodeVis.color = 'red';
-        nodes.update(nodeVis);
+        if (focusedId === id) {
+            // Unselect focused node
+            focusedId = null;
+            nodeVis.selected = false;
+            nodes.update(nodeVis);
 
-        removeUnselected();
+            removeUnselected();
+        } else {
+            // Select node
+            focusedId = nodeVis.id;
+            nodeVis.selected = true;
+            nodeVis.color = 'red';
+            nodes.update(nodeVis);
 
-        $.get(getHref(nodeDataDict[id]), function(nodeData, status) {
-            addEdges(nodeData, true);
-        });
+            removeUnselected();
+
+            $.get(getHref(nodeDataDict[id]), function(nodeData, status) {
+                addEdges(nodeData, true);
+            });
+        }
     }
 });
 
