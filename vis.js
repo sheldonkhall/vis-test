@@ -29,6 +29,11 @@ var vis_data  = {
     edges: edges
 };
 var options = {
+    edges: {
+        arrows: {
+            to: true
+        }
+    },
     interaction: {
         hover: true
     },
