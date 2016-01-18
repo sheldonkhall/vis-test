@@ -4,8 +4,22 @@ function getLabel(nodeData) {
     } else if (nodeData.itemIdentifier !== undefined) {
         var split = nodeData.itemIdentifier.split(/[\/#]/);
         return split[split.length - 1];
+    } else if (nodeData.type === "CASTING" || nodeData.type === "ASSERTION"){
+        return '{' + nodeData.isa + '}';
     } else {
         return nodeData.type;
+    }
+}
+
+function getShape(nodeData) {
+    if (
+        nodeData.type === "CONCEPT_INSTANCE" ||
+        nodeData.type === "ASSERTION" ||
+        nodeData.type === "CASTING"
+    ) {
+        return "ellipse";
+    } else {
+        return "box";
     }
 }
 
@@ -57,7 +71,8 @@ function addNode(nodeData) {
         nodeVis = {
             id: nodeData.links[0].href,
             label: getLabel(nodeData),
-            selected: false
+            selected: false,
+            shape: getShape(nodeData)
         };
 
         nodeVisDict[href] = nodeVis;
@@ -98,7 +113,13 @@ function addEdges(nodeData) {
         addEdge(getHref(edge.source), getHref(edge.target), edge.type);
     });
 
-    $.each(nodeData.in, function(i, edge) {
+    // Get only a few nodes if too many
+    var inNodes = nodeData.in;
+    if (nodeData.in.length > 50) {
+        inNodes = _.sample(nodeData.in, 50);
+    }
+
+    $.each(inNodes, function(i, edge) {
         addNode(edge.source);
         addNode(edge.target);
         addEdge(getHref(edge.source), getHref(edge.target), edge.type);
@@ -118,39 +139,66 @@ function removeUnselected() {
     })
 }
 
+function selectNode(nodeVis) {
+    if (focusedId !== nodeVis.id) {
+        // Select node
+        nodeVis.selected = true;
+        nodeVis.borderWidth = 4;
+        nodeVis.color = {
+            border: '#0F67DA',
+            background: '#93B6E6'
+        };
+        nodeVis.shadow = true;
+        nodes.update(nodeVis);
+    }
+}
+
 network.on("click", function (params) {
+    if (params.nodes.length !== 0) {
+        var id = params.nodes[0];
+        var nodeVis = nodeVisDict[id];
+        selectNode(nodeVis);
+    }
+});
+
+network.on("doubleClick", function (params) {
     if (params.nodes.length === 0) {
         focusedId = null;
         removeUnselected();
     } else {
         var id = params.nodes[0];
 
-        var nodeVis = nodeVisDict[id];
+        if (focusedId !== id) {
+            focusedId = id;
+            removeUnselected();
+        }
 
+        // Pump out some more attached nodes
+        $.get(getHref(nodeDataDict[id]), addEdges);
+    }
+});
+
+network.on("oncontext", function (params) {
+    var id = network.getNodeAt(params.pointer.DOM);
+    if (id !== undefined) {
+        removeNode(id);   
         if (focusedId === id) {
-            // Unselect focused node
             focusedId = null;
-            nodeVis.selected = false;
-            nodes.update(nodeVis);
-
             removeUnselected();
-        } else {
-            // Select node
-            focusedId = nodeVis.id;
-            nodeVis.selected = true;
-            nodeVis.color = 'red';
-            nodes.update(nodeVis);
-
-            removeUnselected();
-
-            $.get(getHref(nodeDataDict[id]), function(nodeData, status) {
-                addEdges(nodeData, true);
-            });
         }
     }
 });
 
-var conceptType = "http://mindmaps.io/concept-type";
+var prefix = "http://mindmaps.io/";
+var conceptType = prefix + "concept-type";
 var params = $.param({"itemIdentifier": conceptType});
 
 $.get("http://localhost:8080/graph/concept/?" + params, addNode);
+
+// Search by item identifier
+$("#search-form").submit(function () {
+    var params = $.param({"itemIdentifier": prefix + $("#search").val()});
+    console.log(params);
+    $.get("http://localhost:8080/graph/concept/?" + params, addNode);
+    return false;
+});
