@@ -125,6 +125,18 @@ function addNode(nodeData) {
             shape: getShape(nodeData)
         };
 
+        // Stick an image right on a node!
+        if (
+            nodeData.value.endsWith(".jpg") ||
+            nodeData.value.endsWith(".png")
+        ) {
+            nodeVis.label = undefined;
+            nodeVis.image = nodeData.value;
+            nodeVis.shape = "circularImage";
+            nodeVis.size = 35;
+            nodeVis.color.border = colors.highlight.border;
+        }
+
         nodeVisDict[href] = nodeVis;
         nodeDataDict[href] = nodeData;
         nodes.add(nodeVis);
