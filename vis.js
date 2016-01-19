@@ -99,8 +99,9 @@ function addNode(nodeData) {
     href = getHref(nodeData);
     if (!(href in nodeVisDict)) {
         // If this is a constraint, do nothing
-        if (nodeData.type.indexOf("CONSTRAINT") > -1) {
-            // return;
+        var showConstraints = $("#show-constraints").is(":checked");
+        if (!showConstraints && nodeData.type.indexOf("CONSTRAINT") > -1) {
+            return;
         }
 
         nodeVis = {
