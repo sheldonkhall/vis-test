@@ -242,14 +242,19 @@ $("#search-form").submit(function () {
 });
 
 // Emergency override! Load everything, quick!!!
-$("#load-all").click(loadRandomNode);
+var loadStuff = false;
+$("#load-all").click(function () {
+    loadStuff = !loadStuff;
+    loadRandomNode();
+});
 
 function loadRandomNode() {
-    // Select ALL nodes
-    _.each(_.values(nodeVisDict), selectNode);
+    if (loadStuff) {
+        // Select ALL nodes
+        _.each(_.values(nodeVisDict), selectNode);
 
-    var node = _.sample(_.values(nodeDataDict), 1)[0];
-    expandNode(getHref(node));
-
-    setTimeout(loadRandomNode, 1000);
+        var node = _.sample(_.values(nodeDataDict), 1)[0];
+        expandNode(getHref(node));
+        setTimeout(loadRandomNode, 1000);
+    }
 }
