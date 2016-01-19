@@ -1,3 +1,58 @@
+var nodeDataDict = {};  // lookup by href
+var nodeVisDict = {};  // lookup by href
+
+var edgeDict = {};
+
+var nodes = new vis.DataSet([]);
+var edges = new vis.DataSet([]);
+
+var focusedId = null;
+var loadStuff = false;
+
+var colors = {
+    data: {
+        border: "#2B7CE9",
+        background: "#97C2FC"
+    },
+    relation: {
+        border: "black",
+        background: "white"
+    },
+    constraint: {
+        border: "black",
+        background: "#ffaa00"
+    },
+    ontology: {
+        border: "maroon",
+        background: "#ef5555"
+    },
+    highlight: {
+        border: "black"
+    }
+}
+
+
+// create a network
+var container = document.getElementById('mynetwork');
+
+var vis_data  = {
+    nodes: nodes,
+    edges: edges
+};
+var options = {
+    edges: {
+        arrows: {
+            to: true
+        }
+    },
+    physics: {
+        solver: "forceAtlas2Based"
+    }
+};
+var network = new vis.Network(container, vis_data, options);
+
+
+// Functions on graph data
 function getLabel(nodeData) {
     if (nodeData.value !== undefined) {
         return nodeData.value.substring(0, 50);
@@ -18,32 +73,20 @@ function getColor(nodeData) {
     var color;
 
     if (nodeData.type === "CONCEPT_INSTANCE") {
-        color = {
-            border: "#2B7CE9",
-            background: "#97C2FC"
-        }
+        color = colors.data;
     } else if (nodeData.type === "CASTING" || nodeData.type === "ASSERTION") {
-        color = {
-            border: "black",
-            background: "white"
-        }
+        color = colors.relation;
     } else if  (nodeData.type.indexOf("CONSTRAINT") > -1){
-        color = {
-            border: "black",
-            background: "#ffaa00"
-        }
+        color = colors.constraint;
     } else {
-        color = {
-            border: "maroon",
-            background: "#ef5555"
-        }
+        color = colors.ontology;
     }
 
     return {
         border: color.border,
         background: color.background,
         highlight: {
-            border: "black",
+            border: colors.highlight.border,
             background: color.background
         }
     };
@@ -64,36 +107,6 @@ function getShape(nodeData) {
 function getHref(nodeData) {
     return nodeData.links[0].href;
 }
-
-var nodeDataDict = {};  // lookup by href
-var nodeVisDict = {};  // lookup by href
-
-var edgeDict = {};
-
-var nodes = new vis.DataSet([]);
-var edges = new vis.DataSet([]);
-
-var focusedId = null;
-
-// create a network
-var container = document.getElementById('mynetwork');
-
-var vis_data  = {
-    nodes: nodes,
-    edges: edges
-};
-var options = {
-    edges: {
-        arrows: {
-            to: true
-        }
-    },
-    physics: {
-        solver: "forceAtlas2Based"
-    }
-};
-
-var network = new vis.Network(container, vis_data, options);
 
 function addNode(nodeData) {
     href = getHref(nodeData);
@@ -181,11 +194,41 @@ function selectNode(nodeVis) {
         // Select node
         nodeVis.selected = true;
         nodeVis.borderWidth = 3;
-        nodeVis.color.border = "black";
+        nodeVis.color.border = colors.highlight.border;
         nodeVis.shadow = true;
         nodes.update(nodeVis);
     }
 }
+
+function expandNode(id) {
+    selectNode(nodeVisDict[id]);
+
+    if (focusedId !== id) {
+        focusedId = id;
+        removeUnselected();
+    }
+
+    // Pump out some more attached nodes
+    $.get(getHref(nodeDataDict[id]), addEdges);
+}
+
+function loadRandomNode() {
+    if (loadStuff) {
+        // Select ALL nodes
+        _.each(_.values(nodeVisDict), selectNode);
+
+        var node = _.sample(_.values(nodeDataDict), 1)[0];
+        expandNode(getHref(node));
+        setTimeout(loadRandomNode, 1000);
+    }
+}
+
+
+// Load concept-type initially
+var prefix = "http://mindmaps.io/";
+var conceptType = prefix + "concept-type";
+var params = $.param({"itemIdentifier": conceptType});
+$.get("http://localhost:8080/graph/concept/?" + params, addNode);
 
 network.on("click", function (params) {
     if (params.nodes.length !== 0) {
@@ -205,6 +248,7 @@ network.on("doubleClick", function (params) {
     }
 });
 
+// On right click
 network.on("oncontext", function (params) {
     var id = network.getNodeAt(params.pointer.DOM);
     if (id !== undefined) {
@@ -216,24 +260,6 @@ network.on("oncontext", function (params) {
     }
 });
 
-function expandNode(id) {
-    selectNode(nodeVisDict[id]);
-
-    if (focusedId !== id) {
-        focusedId = id;
-        removeUnselected();
-    }
-
-    // Pump out some more attached nodes
-    $.get(getHref(nodeDataDict[id]), addEdges);
-}
-
-var prefix = "http://mindmaps.io/";
-var conceptType = prefix + "concept-type";
-var params = $.param({"itemIdentifier": conceptType});
-
-$.get("http://localhost:8080/graph/concept/?" + params, addNode);
-
 // Search by item identifier
 $("#search-form").submit(function () {
     var params = $.param({"itemIdentifier": prefix + $("#search").val()});
@@ -242,19 +268,8 @@ $("#search-form").submit(function () {
 });
 
 // Emergency override! Load everything, quick!!!
-var loadStuff = false;
 $("#load-all").click(function () {
     loadStuff = !loadStuff;
     loadRandomNode();
 });
 
-function loadRandomNode() {
-    if (loadStuff) {
-        // Select ALL nodes
-        _.each(_.values(nodeVisDict), selectNode);
-
-        var node = _.sample(_.values(nodeDataDict), 1)[0];
-        expandNode(getHref(node));
-        setTimeout(loadRandomNode, 1000);
-    }
-}
