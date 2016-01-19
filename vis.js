@@ -1,14 +1,52 @@
 function getLabel(nodeData) {
     if (nodeData.value !== undefined) {
-        return nodeData.value;
+        return nodeData.value.substring(0, 50);
+    } else if (
+            nodeData.type === "CASTING" ||
+            nodeData.type === "ASSERTION" ||
+            nodeData.type.indexOf("CONSTRAINT") > -1) {
+        return '{' + nodeData.isa + '}';
     } else if (nodeData.itemIdentifier !== undefined) {
         var split = nodeData.itemIdentifier.split(/[\/#]/);
         return split[split.length - 1];
-    } else if (nodeData.type === "CASTING" || nodeData.type === "ASSERTION"){
-        return '{' + nodeData.isa + '}';
     } else {
         return nodeData.type;
     }
+}
+
+function getColor(nodeData) {
+    var color;
+
+    if (nodeData.type === "CONCEPT_INSTANCE") {
+        color = {
+            border: "#2B7CE9",
+            background: "#97C2FC"
+        }
+    } else if (nodeData.type === "CASTING" || nodeData.type === "ASSERTION") {
+        color = {
+            border: "black",
+            background: "white"
+        }
+    } else if  (nodeData.type.indexOf("CONSTRAINT") > -1){
+        color = {
+            border: "black",
+            background: "#ffaa00"
+        }
+    } else {
+        color = {
+            border: "maroon",
+            background: "#ef5555"
+        }
+    }
+
+    return {
+        border: color.border,
+        background: color.background,
+        highlight: {
+            border: "black",
+            background: color.background
+        }
+    };
 }
 
 function getShape(nodeData) {
@@ -50,9 +88,6 @@ var options = {
             to: true
         }
     },
-    interaction: {
-        hover: true
-    },
     physics: {
         solver: "forceAtlas2Based"
     }
@@ -65,12 +100,13 @@ function addNode(nodeData) {
     if (!(href in nodeVisDict)) {
         // If this is a constraint, do nothing
         if (nodeData.type.indexOf("CONSTRAINT") > -1) {
-            return;
+            // return;
         }
 
         nodeVis = {
             id: nodeData.links[0].href,
             label: getLabel(nodeData),
+            color: getColor(nodeData),
             selected: false,
             shape: getShape(nodeData)
         };
@@ -140,14 +176,11 @@ function removeUnselected() {
 }
 
 function selectNode(nodeVis) {
-    if (focusedId !== nodeVis.id) {
+    if (!nodeVis.selected && focusedId !== nodeVis.id) {
         // Select node
         nodeVis.selected = true;
-        nodeVis.borderWidth = 4;
-        nodeVis.color = {
-            border: '#0F67DA',
-            background: '#93B6E6'
-        };
+        nodeVis.borderWidth = 3;
+        nodeVis.color.border = "black";
         nodeVis.shadow = true;
         nodes.update(nodeVis);
     }
@@ -167,27 +200,32 @@ network.on("doubleClick", function (params) {
         removeUnselected();
     } else {
         var id = params.nodes[0];
-
-        if (focusedId !== id) {
-            focusedId = id;
-            removeUnselected();
-        }
-
-        // Pump out some more attached nodes
-        $.get(getHref(nodeDataDict[id]), addEdges);
+        expandNode(id);
     }
 });
 
 network.on("oncontext", function (params) {
     var id = network.getNodeAt(params.pointer.DOM);
     if (id !== undefined) {
-        removeNode(id);   
+        removeNode(id);
         if (focusedId === id) {
             focusedId = null;
             removeUnselected();
         }
     }
 });
+
+function expandNode(id) {
+    selectNode(nodeVisDict[id]);
+
+    if (focusedId !== id) {
+        focusedId = id;
+        removeUnselected();
+    }
+
+    // Pump out some more attached nodes
+    $.get(getHref(nodeDataDict[id]), addEdges);
+}
 
 var prefix = "http://mindmaps.io/";
 var conceptType = prefix + "concept-type";
@@ -198,7 +236,19 @@ $.get("http://localhost:8080/graph/concept/?" + params, addNode);
 // Search by item identifier
 $("#search-form").submit(function () {
     var params = $.param({"itemIdentifier": prefix + $("#search").val()});
-    console.log(params);
     $.get("http://localhost:8080/graph/concept/?" + params, addNode);
     return false;
 });
+
+// Emergency override! Load everything, quick!!!
+$("#load-all").click(loadRandomNode);
+
+function loadRandomNode() {
+    // Select ALL nodes
+    _.each(_.values(nodeVisDict), selectNode);
+
+    var node = _.sample(_.values(nodeDataDict), 1)[0];
+    expandNode(getHref(node));
+
+    setTimeout(loadRandomNode, 1000);
+}
