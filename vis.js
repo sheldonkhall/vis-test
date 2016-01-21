@@ -133,8 +133,13 @@ function addNode(nodeData) {
                 nodeData.value.endsWith(".png")
             )
         ) {
+            var imgUrl = nodeData.value;
+            if (!imgUrl.startsWith("http://")) {
+                imgUrl = "http://" + imgUrl;
+            }
+
             nodeVis.label = undefined;
-            nodeVis.image = nodeData.value;
+            nodeVis.image = imgUrl;
             nodeVis.shape = "circularImage";
             nodeVis.size = 35;
             nodeVis.color.border = colors.highlight.border;
