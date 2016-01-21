@@ -127,8 +127,11 @@ function addNode(nodeData) {
 
         // Stick an image right on a node!
         if (
-            nodeData.value.endsWith(".jpg") ||
-            nodeData.value.endsWith(".png")
+            nodeData.value !== undefined &&
+            (
+                nodeData.value.endsWith(".jpg") ||
+                nodeData.value.endsWith(".png")
+            )
         ) {
             nodeVis.label = undefined;
             nodeVis.image = nodeData.value;
@@ -272,10 +275,15 @@ network.on("oncontext", function (params) {
     }
 });
 
-// Search by item identifier
+// Search by item identifier and value
 $("#search-form").submit(function () {
-    var params = $.param({"itemIdentifier": prefix + $("#search").val()});
+    var value = $("#search").val();
+    var params = $.param({"itemIdentifier": prefix + value});
     $.get("http://localhost:8080/graph/concept/?" + params, addNode);
+    $.get("http://localhost:8080/graph/concept/" + value, function (data) {
+        console.log(data);
+        _.map(data.content, addNode);
+    });
     return false;
 });
 
