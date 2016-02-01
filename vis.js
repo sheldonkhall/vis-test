@@ -157,6 +157,14 @@ function removeNode(nodeId) {
     delete nodeVisDict[nodeId];
 }
 
+function addOutEdges(nodeData){
+    $.each(nodeData.out, function(i, edge) {
+        addNode(edge.source);
+        addNode(edge.target);
+        addEdge(getHref(edge.source), getHref(edge.target), edge.type);
+    });
+}
+
 function addEdge(fromId, toId, type) {
     var edgeVis = {
         from: fromId,
@@ -220,6 +228,18 @@ function selectNode(nodeVis) {
     }
 }
 
+function expandNodeOut(id){
+    selectNode(nodeVisDict[id]);
+
+    if (focusedId !== id) {
+        focusedId = id;
+        removeUnselected();
+    }
+
+    // Pump out some more attached nodes
+    get(getHref(nodeDataDict[id]), addOutEdges);
+}
+
 function expandNode(id) {
     selectNode(nodeVisDict[id]);
 
@@ -261,10 +281,13 @@ function get(url, callback) {
 var prefix = "http://mindmaps.io/";
 var conceptType = prefix + "concept-type";
 var params = $.param({"itemIdentifier": conceptType});
-get("http://localhost:8080/graph/concept/?" + params, addNode);
+get("http://localhost:8090/graph/concept/?" + params, addNode);
 
 network.on("click", function (params) {
-    if (params.nodes.length !== 0) {
+    if(params.event.srcEvent.metaKey){
+        var id = params.nodes[0];
+        expandNodeOut(id);
+    } else if (params.nodes.length !== 0) {
         var id = params.nodes[0];
         var nodeVis = nodeVisDict[id];
         selectNode(nodeVis);
@@ -297,8 +320,8 @@ network.on("oncontext", function (params) {
 $("#search-form").submit(function () {
     var value = $("#search").val();
     var params = $.param({"itemIdentifier": prefix + value});
-    get("http://localhost:8080/graph/concept/?" + params, addNode);
-    get("http://localhost:8080/graph/concept/" + value, function (data) {
+    get("http://localhost:8090/graph/concept/?" + params, addNode);
+    get("http://localhost:8090/graph/concept/" + value, function (data) {
         console.log(data);
         _.map(data.content, addNode);
     });
