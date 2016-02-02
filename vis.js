@@ -110,7 +110,7 @@ function getHref(nodeData) {
 
 function getHrefOut(nodeData) {
     var bob = nodeData.links[0].href.split("/");
-    return "http://localhost:8090/graph/conceptOut/" + bob[bob.length-1];
+    return "http://gm-plx133.internal.mindmaps.io:80/graph/conceptOut/" + bob[bob.length-1];
 }
 
 function addNode(nodeData) {
@@ -286,7 +286,7 @@ function get(url, callback) {
 var prefix = "http://mindmaps.io/";
 var conceptType = prefix + "concept-type";
 var params = $.param({"itemIdentifier": conceptType});
-get("http://localhost:8090/graph/concept/?" + params, addNode);
+get("http://gm-plx133.internal.mindmaps.io:80/graph/concept/?" + params, addNode);
 
 network.on("click", function (params) {
     if(params.event.srcEvent.metaKey){
@@ -325,10 +325,13 @@ network.on("oncontext", function (params) {
 $("#search-form").submit(function () {
     var value = $("#search").val();
     var params = $.param({"itemIdentifier": prefix + value});
-    get("http://localhost:8090/graph/concept/?" + params, addNode);
-    get("http://localhost:8090/graph/concept/" + value, function (data) {
-        console.log(data);
-        _.map(data.content, addNode);
+    get("http://gm-plx133.internal.mindmaps.io:80/graph/concept/?" + params, function (data) {
+        addNode(data);
+
+        get("http://gm-plx133.internal.mindmaps.io:80/graph/concept/" + value, function (data) {
+            console.log(data);
+            _.map(data.content, addNode);
+        });
     });
     return false;
 });
