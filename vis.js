@@ -108,6 +108,11 @@ function getHref(nodeData) {
     return nodeData.links[0].href;
 }
 
+function getHrefOut(nodeData) {
+    var bob = nodeData.links[0].href.split("/");
+    return "http://localhost:8090/graph/conceptOut/" + bob[bob.length-1];
+}
+
 function addNode(nodeData) {
     href = getHref(nodeData);
     if (!(href in nodeVisDict)) {
@@ -237,7 +242,7 @@ function expandNodeOut(id){
     }
 
     // Pump out some more attached nodes
-    get(getHref(nodeDataDict[id]), addOutEdges);
+    get(getHrefOut(nodeDataDict[id]), addOutEdges);
 }
 
 function expandNode(id) {
