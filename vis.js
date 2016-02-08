@@ -326,13 +326,11 @@ $("#search-form").submit(function () {
     var value = $("#search").val();
     var params = $.param({"itemIdentifier": prefix + value});
     get("http://gm-plx133.internal.mindmaps.io:80/graph/concept/?" + params, function (data) {
-        addNode(data);
-
-        get("http://gm-plx133.internal.mindmaps.io:80/graph/concept/" + value, function (data) {
-            console.log(data);
-            _.map(data.content, addNode);
+        addNode(data);});
+    get("http://gm-plx133.internal.mindmaps.io:80/graph/concept/" + value, function (_data) {
+            console.log(_data);
+            _.map(_data.content, addNode);
         });
-    });
     return false;
 });
 
